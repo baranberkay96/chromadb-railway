@@ -1,0 +1,44 @@
+# Token gateway in front of Chroma (Chroma 1.x has no built-in authentication).
+# Every request needs the token from CHROMA_AUTH_TOKEN, sent the way Chroma's
+# clients send it:
+#   Authorization: Bearer {token}   (default of chromadb / chromadb-js token auth)
+#   X-Chroma-Token: {token}         (chroma_auth_token_transport_header="X-Chroma-Token")
+# Only the heartbeat/version endpoints and the gateway's own /healthz are open.
+# {$VAR} values are filled in from the environment when Caddy starts.
+{
+	admin off
+	auto_https off
+	persist_config off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:{$PORT:8080} {
+	@health path /healthz
+	handle @health {
+		respond "ok" 200
+	}
+
+	@open {
+		method GET HEAD
+		path /api/v2/heartbeat /api/v1/heartbeat /api/v2/version /api/v1/version
+	}
+	@bearer header Authorization "Bearer {$CHROMA_AUTH_TOKEN}"
+	@xtoken header X-Chroma-Token "{$CHROMA_AUTH_TOKEN}"
+
+	handle @open {
+		reverse_proxy {$CHROMA_UPSTREAM}
+	}
+	handle @bearer {
+		reverse_proxy {$CHROMA_UPSTREAM}
+	}
+	handle @xtoken {
+		reverse_proxy {$CHROMA_UPSTREAM}
+	}
+	handle {
+		header Content-Type application/json
+		header WWW-Authenticate `Bearer realm="chroma"`
+		respond `{"error":"Unauthorized","message":"Send the CHROMA_AUTH_TOKEN value as 'Authorization: Bearer <token>' or 'X-Chroma-Token: <token>'."}` 401
+	}
+}

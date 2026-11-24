@@ -1,0 +1,114 @@
+{
+  "name": "Chroma 1.5 Vector Database",
+  "description": "Chroma vector database for RAG and embeddings, behind token auth.",
+  "category": "AI/ML",
+  "tags": [
+    "chroma",
+    "chromadb",
+    "vector-database",
+    "embeddings",
+    "rag",
+    "ai",
+    "llm"
+  ],
+  "image": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/chroma.svg",
+  "upstream": {
+    "chroma": "chromadb/chroma:1.5.9 (Chroma 1.5.9, Rust server; digest sha256:1e0b73a187a28757c572acba508c46f48c9e8b0acaf5c20e6d95cdedce1acdf6, released 2026-05-05)",
+    "gateway": "caddy:2.11.9-alpine (digest sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0)",
+    "checked": "2026-11-24"
+  },
+  "services": {
+    "Chroma": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/chroma.svg",
+      "source": {
+        "image": "chromadb/chroma:1.5.9"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/api/v2/heartbeat",
+      "healthcheckTimeout": 300,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 10,
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": false,
+      "targetPort": null,
+      "tcpProxy": null,
+      "volume": {
+        "mountPath": "/data"
+      },
+      "variables": {
+        "PORT": {
+          "defaultValue": "8000",
+          "description": "Port Chroma listens on (private network only; the healthcheck uses it).",
+          "required": false
+        },
+        "CHROMA_PORT": {
+          "defaultValue": "${{PORT}}",
+          "description": "Chroma's own port setting (config key port).",
+          "required": false
+        },
+        "CHROMA_LISTEN_ADDRESS": {
+          "defaultValue": "::",
+          "description": "Listen on IPv4 and IPv6 (Railway's private DNS returns both).",
+          "required": false
+        },
+        "CHROMA_PERSIST_PATH": {
+          "defaultValue": "/data",
+          "description": "Where Chroma keeps its SQLite catalog and HNSW index files (the volume).",
+          "required": false
+        },
+        "RAILWAY_DEPLOYMENT_DRAINING_SECONDS": {
+          "defaultValue": "30",
+          "description": "Time Chroma gets to flush and shut down on redeploy.",
+          "required": false
+        }
+      }
+    },
+    "Chroma Gateway": {
+      "icon": "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/caddy.svg",
+      "source": {
+        "repo": "baranberkay96/chromadb-railway",
+        "rootDirectory": "/services/gateway"
+      },
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": "/healthz",
+      "healthcheckTimeout": 120,
+      "restartPolicyType": "ALWAYS",
+      "numReplicas": 1,
+      "cronSchedule": null,
+      "publicDomain": true,
+      "targetPort": 8080,
+      "tcpProxy": null,
+      "volume": null,
+      "variables": {
+        "PORT": {
+          "defaultValue": "8080",
+          "description": "Port the gateway listens on (public HTTPS domain).",
+          "required": false
+        },
+        "CHROMA_AUTH_TOKEN": {
+          "defaultValue": "${{secret(40, \"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\")}}",
+          "description": "API token, generated at deploy. Clients send it as 'Authorization: Bearer {token}' or 'X-Chroma-Token: {token}'. Under 16 characters locks the gateway.",
+          "required": true
+        },
+        "CHROMA_UPSTREAM": {
+          "defaultValue": "${{Chroma.RAILWAY_PRIVATE_DOMAIN}}:${{Chroma.PORT}}",
+          "description": "Chroma on the private network (host:port).",
+          "required": false
+        },
+        "CHROMA_URL": {
+          "defaultValue": "https://${{RAILWAY_PUBLIC_DOMAIN}}",
+          "description": "Public Chroma URL for clients outside Railway (with the token).",
+          "required": false
+        },
+        "CHROMA_PRIVATE_URL": {
+          "defaultValue": "http://${{Chroma.RAILWAY_PRIVATE_DOMAIN}}:${{Chroma.PORT}}",
+          "description": "Direct private URL for apps in this project (no token needed on the private network).",
+          "required": false
+        }
+      }
+    }
+  }
+}
