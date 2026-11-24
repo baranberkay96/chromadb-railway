@@ -36,14 +36,19 @@
 
 | Service | Idle RAM | Typical |
 |---|---|---|
-| Chroma | see `_reports/round13/184-chromadb.md` | grows with loaded HNSW indexes |
-| Chroma Gateway | see report | 20–40 MB |
+| Chroma | 12 MB (measured, empty) | grows with loaded HNSW indexes |
+| Chroma Gateway | 55 MB (measured) | 50–80 MB |
 
-Runs on every plan for small collections; about $1–2/month idle.
+Runs on every plan for small collections; under $1/month idle.
 
 ## Verification checklist
 
-See `_reports/round13/184-chromadb.md`: health of both services, 401 without token, collection create/add/query through the gateway with both header formats, persistence after redeploy, short-token lock.
+- [x] Both services SUCCESS; Chroma healthcheck `/api/v2/heartbeat` over IPv4 with `CHROMA_LISTEN_ADDRESS=::` (dual stack); gateway `/healthz` 200.
+- [x] Heartbeat and version open; collections endpoint 401 without token and with a wrong token.
+- [x] REST through the gateway: collection created (Bearer), 3 embeddings added and queried (X-Chroma-Token), count 3.
+- [x] Official `chromadb-client` 1.5.9: `HttpClient(headers={"Authorization": "Bearer ..."})` add + query; `Settings(chroma_client_auth_provider=TokenAuthClientProvider, chroma_auth_token_transport_header="X-Chroma-Token")` lists collections; a client without token is refused.
+- [x] `CHROMA_AUTH_TOKEN=short`: deploy SUCCESS, gateway locked (old and short tokens 401), log explains; restoring the token works.
+- [x] Collections persisted across a Chroma redeploy.
 
 ## Open questions
 
