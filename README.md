@@ -1,5 +1,7 @@
 # Deploy and Host Chroma with Railway
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/chroma-15-vector-database?referralCode=20H68q)
+
 Chroma is an open-source vector database for AI applications: it stores embeddings with documents and metadata and answers similarity searches for retrieval-augmented generation (RAG), semantic search and agent memory. This community template runs Chroma 1.5 on a persistent volume behind a small gateway that requires an API token, so the database is never open to the internet.
 
 ## About Hosting Chroma
